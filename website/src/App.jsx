@@ -16,18 +16,27 @@ function Background() {
   return <primitive object={scene} />;
 }
 
-function AppleText() {
-  const { scene } = useGLTF(`${BASE}models/apple_text.glb`);
+function Girl() {
+  const { scene } = useGLTF(`${BASE}models/girl_redhair.glb`);
   const ref = useRef();
   scene.traverse((o) => {
-    if (o.isMesh) o.castShadow = true;
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
   });
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
-    ref.current.position.y = Math.sin(t * 0.9) * 0.18;
-    ref.current.rotation.y = Math.sin(t * 0.35) * 0.14;
+    // gentle showcase idle: soft bob + slight turn
+    ref.current.position.y = Math.sin(t * 1.1) * 0.05;
+    ref.current.rotation.y = Math.PI + Math.sin(t * 0.45) * 0.28;
   });
-  return <primitive ref={ref} object={scene} />;
+  // stands in front of the stack (where the APPLE text was), facing the camera
+  return (
+    <group ref={ref} position={[0, 0, 3.4]} rotation={[0, Math.PI, 0]}>
+      <primitive object={scene} />
+    </group>
+  );
 }
 
 export default function App() {
@@ -36,7 +45,7 @@ export default function App() {
       <Canvas
         shadows
         dpr={[1, 2]}
-        camera={{ position: [7.5, 4.6, 9.5], fov: 38 }}
+        camera={{ position: [4.2, 2.9, 10.4], fov: 38 }}
         gl={{ antialias: true }}
       >
         <color attach="background" args={["#f4f4f5"]} />
@@ -50,13 +59,13 @@ export default function App() {
         <directionalLight position={[-6, 4, -4]} intensity={0.35} />
         <Suspense fallback={null}>
           <Background />
-          <AppleText />
+          <Girl />
         </Suspense>
         <OrbitControls
-          target={[0, 1.3, 0]}
+          target={[0, 1.55, 3.2]}
           enablePan={false}
-          minDistance={5}
-          maxDistance={22}
+          minDistance={4}
+          maxDistance={20}
           autoRotate
           autoRotateSpeed={0.7}
         />
@@ -77,14 +86,14 @@ export default function App() {
 
         <main className="hero">
           <h1>
-            Apple,
+            The girl,
             <br />
             in 3D.
           </h1>
           <p className="sub">
-            A rectangle, a circle and a cylinder — stacked.
+            Copper hair, olive hooded coat, lace-up boots.
             <br />
-            The word floats in front. Drag it around.
+            Modeled in Blender, rendered live. Drag her around.
           </p>
         </main>
 
@@ -98,4 +107,4 @@ export default function App() {
 
 // Preload so the scene pops in fast
 useGLTF.preload(`${import.meta.env.BASE_URL}models/background.glb`);
-useGLTF.preload(`${import.meta.env.BASE_URL}models/apple_text.glb`);
+useGLTF.preload(`${import.meta.env.BASE_URL}models/girl_redhair.glb`);

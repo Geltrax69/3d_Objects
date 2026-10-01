@@ -16,7 +16,7 @@
 |---|---|
 | `girl_redhair.glb` | Low-poly girl: red hair, olive hooded coat, dark leggings, white boot cuffs, lace-up boots — built from the reference turnaround |
 
-Previews in `previews/characters/` (orthographic front + 3/4 angle).
+Previews in `previews/characters/` (front + 3/4 + side + back).
 
 ## Using in Spline
 

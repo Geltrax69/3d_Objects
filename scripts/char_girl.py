@@ -15,6 +15,12 @@ Outputs:
     ~/workspace/3d model/exports/characters/girl_redhair.glb
     ~/workspace/3d model/renders/characters/girl_front.png  (orthographic)
     ~/workspace/3d model/renders/characters/girl_angle.png   (3/4 perspective)
+    ~/workspace/3d model/renders/characters/girl_side.png    (orthographic)
+    ~/workspace/3d model/renders/characters/girl_back.png    (orthographic)
+
+Shading: smooth on all organic surfaces (face, hair, coat, limbs, boots)
+with sharp edges only where rims must stay crisp — low-poly geometry,
+clean smooth render, matching the reference's surface quality.
 
 Character faces +Y. Total height ~3.35.
 """
@@ -30,6 +36,8 @@ WS = os.path.join(HOME, "workspace", "3d model")
 EXPORT_GLB = os.path.join(WS, "exports", "characters", "girl_redhair.glb")
 RENDER_FRONT = os.path.join(WS, "renders", "characters", "girl_front.png")
 RENDER_ANGLE = os.path.join(WS, "renders", "characters", "girl_angle.png")
+RENDER_SIDE = os.path.join(WS, "renders", "characters", "girl_side.png")
+RENDER_BACK = os.path.join(WS, "renders", "characters", "girl_back.png")
 os.makedirs(os.path.dirname(EXPORT_GLB), exist_ok=True)
 os.makedirs(os.path.dirname(RENDER_FRONT), exist_ok=True)
 
@@ -69,11 +77,11 @@ MAT = {
 }
 
 
-def finish(obj, name, material, char=True):
+def finish(obj, name, material, char=True, smooth=True):
     obj.name = name
     obj.data.materials.append(material)
     for p in obj.data.polygons:
-        p.use_smooth = False
+        p.use_smooth = smooth
     if char:
         CHAR.append(obj)
     return obj
@@ -84,26 +92,44 @@ def apply_all(obj):
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
 
-def ball(loc, sx, sy, sz, material, name, seg=16, rings=12):
+def sharpen(obj, angle_deg=35):
+    """Mark edges sharper than angle_deg as sharp, so smooth shading keeps
+    crisp rims (hem, cuffs, segment joints) while faces shade smoothly."""
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.edges.ensure_lookup_table()
+    limit = math.radians(angle_deg)
+    for e in bm.edges:
+        if len(e.link_faces) == 2 and e.calc_face_angle() > limit:
+            e.smooth = False
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    return obj
+
+
+def ball(loc, sx, sy, sz, material, name, seg=16, rings=12, smooth=True):
     bpy.ops.mesh.primitive_uv_sphere_add(
         segments=seg, ring_count=rings, radius=1.0, location=loc)
     obj = bpy.context.active_object
     obj.scale = (sx, sy, sz)
     apply_all(obj)
-    return finish(obj, name, material)
+    return finish(obj, name, material, smooth=smooth)
 
 
-def box(loc, dims, material, name, rot=None):
+def box(loc, dims, material, name, rot=None, smooth=True):
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc)
     obj = bpy.context.active_object
     obj.scale = dims
     if rot:
         obj.rotation_euler = rot
     apply_all(obj)
-    return finish(obj, name, material)
+    return finish(obj, name, material, smooth=smooth)
 
 
-def tapered_lock(loc, dims, taper, material, name, rot=None):
+def tapered_lock(loc, dims, taper, material, name, rot=None, smooth=True,
+                sharp_angle=30):
     """Box whose local -Z (tip) end is narrowed by `taper` - molded, not blunt."""
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc)
     obj = bpy.context.active_object
@@ -122,10 +148,14 @@ def tapered_lock(loc, dims, taper, material, name, rot=None):
     if rot:
         obj.rotation_euler = rot
     apply_all(obj)
-    return finish(obj, name, material)
+    finish(obj, name, material, smooth=smooth)
+    if smooth:
+        sharpen(obj, sharp_angle)
+    return obj
 
 
-def limb(p1, p2, r1, r2, material, name, verts=12):
+def limb(p1, p2, r1, r2, material, name, verts=12, smooth=True,
+         sharp_angle=40):
     """Tapered low-poly limb from p1 (radius r1) to p2 (radius r2)."""
     v1, v2 = Vector(p1), Vector(p2)
     d = v2 - v1
@@ -135,7 +165,10 @@ def limb(p1, p2, r1, r2, material, name, verts=12):
     obj = bpy.context.active_object
     obj.rotation_euler = d.to_track_quat("Z", "Y").to_euler()
     apply_all(obj)
-    return finish(obj, name, material)
+    finish(obj, name, material, smooth=smooth)
+    if smooth:
+        sharpen(obj, sharp_angle)
+    return obj
 
 
 # ================================================================== HEAD
@@ -156,12 +189,13 @@ for sx in (1, -1):
          f"EyeGlint_{s}", seg=8, rings=6)
     # upper lash line
     box((x, 0.29, 3.00), (0.20, 0.03, 0.035), MAT["eye"], f"Lash_{s}",
-        rot=(0.1, 0, -0.12 * sx))
+        rot=(0.1, 0, -0.12 * sx), smooth=False)
     # brow
     box((x, 0.285, 3.10), (0.16, 0.028, 0.032), MAT["hair_dark"], f"Brow_{s}",
-        rot=(0, 0, -0.15 * sx))
-box((0, 0.315, 2.80), (0.035, 0.025, 0.035), MAT["skin_shade"], "Nose")
-box((0, 0.30, 2.71), (0.095, 0.02, 0.02), MAT["mouth"], "Mouth")
+        rot=(0, 0, -0.15 * sx), smooth=False)
+box((0, 0.315, 2.80), (0.035, 0.025, 0.035), MAT["skin_shade"], "Nose",
+    smooth=False)
+box((0, 0.30, 2.71), (0.095, 0.02, 0.02), MAT["mouth"], "Mouth", smooth=False)
 
 # ================================================================== HAIR
 # skull cap
@@ -181,6 +215,7 @@ part = bpy.context.active_object
 part.rotation_euler = (math.radians(180), math.radians(45), 0)
 apply_all(part)
 finish(part, "Fringe_Center", MAT["hair"])
+sharpen(part, 30)
 
 # large side sections framing the face in front of the shoulders
 for sx in (1, -1):
@@ -198,6 +233,7 @@ bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 back.scale = (1.0, 0.5, 1.0)
 bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 finish(back, "Hair_Back", MAT["hair"])
+sharpen(back, 30)
 
 # ============================================================== COAT (A-line)
 # trapezoid torso: narrow shoulders -> wide hem
@@ -207,6 +243,7 @@ coat = bpy.context.active_object
 coat.scale = (1.0, 0.85, 1.0)
 apply_all(coat)
 finish(coat, "Coat", MAT["coat"])
+sharpen(coat, 35)
 
 # chunky draped hood collar around the neck (reads as a hood, not a scarf)
 bpy.ops.mesh.primitive_torus_add(major_radius=0.23, minor_radius=0.11,
@@ -255,15 +292,18 @@ for sx in (1, -1):
                                     depth=0.24, location=(x, 0, 0.80))
     cuff = bpy.context.active_object
     finish(cuff, f"BootCuff_{s}", MAT["cuff"])
+    sharpen(cuff, 35)
     # compact foot
-    box((x, 0.11, 0.115), (0.20, 0.44, 0.17), MAT["boot"], f"BootFoot_{s}")
+    box((x, 0.11, 0.115), (0.20, 0.44, 0.17), MAT["boot"], f"BootFoot_{s}",
+        smooth=False)
     # flat sole
-    box((x, 0.12, 0.032), (0.22, 0.48, 0.064), MAT["dark"], f"BootSole_{s}")
+    box((x, 0.12, 0.032), (0.22, 0.48, 0.064), MAT["dark"], f"BootSole_{s}",
+        smooth=False)
     # criss-cross laces on the front
     for j, lz in enumerate((0.52, 0.60, 0.68)):
         for k, ang in enumerate((0.55, -0.55)):
             box((x, 0.103, lz), (0.13, 0.016, 0.024), MAT["lace"],
-                f"Lace_{s}_{j}_{k}", rot=(0, 0, ang))
+                f"Lace_{s}_{j}_{k}", rot=(0, 0, ang), smooth=False)
 
 # ================================================================ staging
 bpy.ops.mesh.primitive_plane_add(size=24, location=(0, 0, 0))
@@ -339,6 +379,8 @@ def render_to(path, cam_loc, ortho=True, target=TARGET, hide_ground=False):
 if os.environ.get("SKIP_RENDER") != "1":
     render_to(RENDER_FRONT, (0, 9, 1.7), ortho=True, hide_ground=True)
     render_to(RENDER_ANGLE, (4.6, 5.6, 3.1), ortho=False)
+    render_to(RENDER_SIDE, (9, 0, 1.7), ortho=True, hide_ground=True)
+    render_to(RENDER_BACK, (0, -9, 1.7), ortho=True, hide_ground=True)
 
 # ------------------------------------------------------------------- export
 bpy.ops.object.select_all(action="DESELECT")

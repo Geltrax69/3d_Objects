@@ -10,6 +10,14 @@
 | `apple_text.glb` | The extruded 3D **APPLE** text on its own — import separately so you can move it around independently |
 | `test_scene.glb` | Everything together, the full staged scene |
 
+## Characters (`models/characters/`)
+
+| File | Contains |
+|---|---|
+| `girl_redhair.glb` | Low-poly girl: red hair, olive hooded coat, dark leggings, white boot cuffs, lace-up boots — built from the reference turnaround |
+
+Previews in `previews/characters/` (front + back).
+
 ## Using in Spline
 
 1. Drag `background.glb` into your Spline scene — that's your backdrop.

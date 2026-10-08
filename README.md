@@ -13,6 +13,15 @@
 ![Blender](https://img.shields.io/badge/built%20with-Blender%205.2.2-orange)
 ![React](https://img.shields.io/badge/showcase-React%2019%20%2B%20three.js-cyan)
 
+## Screenshots
+
+<p align="center">
+  <img src="./screenshot-ui.png" alt="3d_Objects UI" width="100%" />
+  <br />
+  <em>Interactive 3D object viewer.</em>
+</p>
+
+
 ## What it is
 
 A small 3D asset library of **procedurally generated GLB models**, built with
